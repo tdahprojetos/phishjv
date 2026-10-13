@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phishjv — Treinamentos</title>
+  <style>
+    :root { --bg:#0f1115; --card:#171a21; --line:#272b35; --fg:#e6e8ee; --muted:#9aa3b2;
+            --accent:#4f7cff; --ok:#35c28e; --warn:#f2b84b; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--fg);
+           font:15px/1.5 system-ui,Segoe UI,Roboto,sans-serif; }
+    header { padding:20px 28px; border-bottom:1px solid var(--line); display:flex; gap:12px; align-items:center; }
+    header h1 { font-size:20px; margin:0; }
+    header .tag { color:var(--muted); font-size:12px; }
+    nav a { color:var(--accent); text-decoration:none; font-size:14px; margin-left:16px; }
+    main { padding:24px 28px; max-width:1000px; margin:0 auto; }
+    .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:16px; margin-bottom:28px; }
+    .kpi { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; }
+    .kpi .n { font-size:30px; font-weight:700; } .kpi .l { color:var(--muted); font-size:13px; }
+    .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; }
+    .course { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; }
+    .course h3 { margin:0 0 6px; font-size:16px; }
+    .course .topic { display:inline-block; font-size:11px; text-transform:uppercase; letter-spacing:.5px;
+                     color:var(--accent); background:#18223f; padding:2px 8px; border-radius:999px; margin-bottom:8px; }
+    .course p { color:var(--muted); font-size:14px; margin:8px 0 14px; }
+    .course a { color:#fff; background:var(--accent); text-decoration:none; padding:8px 14px;
+                border-radius:8px; font-size:14px; display:inline-block; }
+    h2 { font-size:14px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin:32px 0 12px; }
+    table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--line);
+            border-radius:12px; overflow:hidden; }
+    th,td { text-align:left; padding:11px 14px; border-bottom:1px solid var(--line); font-size:14px; }
+    th { color:var(--muted); font-size:12px; text-transform:uppercase; }
+    tr:last-child td { border-bottom:none; }
+    .pill { padding:2px 9px; border-radius:999px; font-size:12px; font-weight:600; }
+    .st-completed { background:#13351f; color:#7fe0b0; }
+    .st-assigned { background:#2a2e38; color:var(--muted); }
+    .st-in_progress { background:#3a2f12; color:var(--warn); }
+    .empty { color:var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Phishjv</h1>
+    <span class="tag">v{{ version }} · treinamentos</span>
+    <nav><a href="/">← Painel</a><a href="/training">Treinamentos</a><a href="/triage">Triagem</a></nav>
+  </header>
+  <main>
+    <div class="kpis">
+      <div class="kpi"><div class="n">{{ courses|length }}</div><div class="l">Trilhas disponíveis</div></div>
+      <div class="kpi"><div class="n">{{ total_enr }}</div><div class="l">Inscrições</div></div>
+      <div class="kpi"><div class="n" style="color:var(--ok)">{{ completed }}</div><div class="l">Concluídas</div></div>
+    </div>
+
+    <h2>Trilhas</h2>
+    <div class="cards">
+      {% for c in courses %}
+      <div class="course">
+        <span class="topic">{{ c.topic }}</span>
+        <h3>{{ c.title }}</h3>
+        <p>{{ c.summary }}</p>
+        <small style="color:var(--muted)">{{ c.lessons|length }} lições · {{ c.questions|length }} questões · aprova com {{ c.pass_score }}%</small><br><br>
+        <a href="/training/course/{{ c.id }}">Fazer trilha</a>
+      </div>
+      {% endfor %}
+    </div>
+
+    <h2>Inscrições</h2>
+    {% if enrollments %}
+    <table>
+      <tr><th>Alvo</th><th>Trilha</th><th>Motivo</th><th>Status</th><th>Nota</th></tr>
+      {% for e in enrollments %}
+      <tr>
+        <td>{{ e.target.full_name or e.target.email }}</td>
+        <td>{{ e.course.title }}</td>
+        <td style="color:var(--muted)">{{ e.reason }}</td>
+        <td><span class="pill st-{{ e.status.value }}">{{ e.status.value }}</span></td>
+        <td>{{ e.score if e.score is not none else '—' }}{{ '%' if e.score is not none else '' }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}<p class="empty">Nenhuma inscrição ainda. Quem falhar numa campanha com trilha vinculada aparece aqui.</p>{% endif %}
+  </main>
+</body>
+</html>

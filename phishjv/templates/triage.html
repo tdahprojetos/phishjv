@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phishjv — Triagem</title>
+  <style>
+    :root { --bg:#0f1115; --card:#171a21; --line:#272b35; --fg:#e6e8ee; --muted:#9aa3b2;
+            --accent:#4f7cff; --ok:#35c28e; --bad:#ff5c6c; --warn:#f2b84b; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui,Segoe UI,Roboto,sans-serif; }
+    header { padding:20px 28px; border-bottom:1px solid var(--line); display:flex; gap:12px; align-items:center; }
+    header h1 { font-size:20px; margin:0; } header .tag { color:var(--muted); font-size:12px; }
+    nav a { color:var(--accent); text-decoration:none; font-size:14px; margin-left:16px; }
+    main { padding:24px 28px; max-width:1100px; margin:0 auto; }
+    .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:16px; margin-bottom:24px; }
+    .kpi { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
+    .kpi .n { font-size:28px; font-weight:700; } .kpi .l { color:var(--muted); font-size:13px; }
+    table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--line);
+            border-radius:12px; overflow:hidden; }
+    th,td { text-align:left; padding:11px 14px; border-bottom:1px solid var(--line); font-size:14px; vertical-align:top; }
+    th { color:var(--muted); font-size:12px; text-transform:uppercase; }
+    tr:last-child td { border-bottom:none; }
+    .pill { padding:2px 9px; border-radius:999px; font-size:12px; font-weight:600; }
+    .c-unclassified { background:#2a2e38; color:var(--muted); }
+    .c-clean { background:#13351f; color:#7fe0b0; }
+    .c-spam { background:#3a2f12; color:var(--warn); }
+    .c-threat { background:#3a1518; color:var(--bad); }
+    .c-simulation { background:#18223f; color:#9db8ff; }
+    form.inline { display:flex; gap:6px; }
+    select, button { background:#0b0d12; color:var(--fg); border:1px solid var(--line); border-radius:7px; padding:6px 8px; font-size:13px; }
+    button { background:var(--accent); color:#fff; border:0; cursor:pointer; }
+    .empty { color:var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Phishjv</h1>
+    <span class="tag">v{{ version }} · triagem de reportes</span>
+    <nav><a href="/">← Painel</a><a href="/training">Treinamentos</a><a href="/triage">Triagem</a></nav>
+  </header>
+  <main>
+    <div class="kpis">
+      <div class="kpi"><div class="n">{{ reports|length }}</div><div class="l">Reportes</div></div>
+      <div class="kpi"><div class="n" style="color:var(--warn)">{{ pending }}</div><div class="l">Pendentes</div></div>
+      <div class="kpi"><div class="n" style="color:var(--bad)">{{ threats }}</div><div class="l">Ameaças confirmadas</div></div>
+    </div>
+
+    {% if reports %}
+    <table>
+      <tr><th>Quando</th><th>Reportado por</th><th>Assunto / Remetente</th><th>Classificação</th><th>Ação</th></tr>
+      {% for r in reports %}
+      <tr>
+        <td style="white-space:nowrap;color:var(--muted)">{{ r.created_at.strftime('%d/%m %H:%M') }}</td>
+        <td>{{ r.reporter_email or '—' }}</td>
+        <td><b>{{ r.subject or '(sem assunto)' }}</b><br>
+            <small style="color:var(--muted)">{{ r.sender or '—' }}</small></td>
+        <td><span class="pill c-{{ r.classification.value }}">{{ r.classification.value }}</span></td>
+        <td>
+          <form class="inline" method="post" action="/triage/{{ r.id }}/classify">
+            <select name="classification">
+              {% for c in classes %}
+              <option value="{{ c }}" {{ 'selected' if c == r.classification.value else '' }}>{{ c }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit">Salvar</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}<p class="empty">Nenhum reporte na fila. Reportes chegam via Phish Alert Button (POST /report) ou de simulações.</p>{% endif %}
+  </main>
+</body>
+</html>

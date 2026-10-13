@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phishjv — Painel</title>
+  <style>
+    :root { --bg:#0f1115; --card:#171a21; --line:#272b35; --fg:#e6e8ee; --muted:#9aa3b2;
+            --accent:#4f7cff; --bad:#ff5c6c; --ok:#35c28e; --warn:#f2b84b; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--fg);
+           font:15px/1.5 system-ui,Segoe UI,Roboto,sans-serif; }
+    header { padding:20px 28px; border-bottom:1px solid var(--line);
+             display:flex; align-items:center; gap:12px; }
+    header h1 { font-size:20px; margin:0; letter-spacing:.3px; }
+    header .tag { color:var(--muted); font-size:12px; }
+    .badge { margin-left:auto; font-size:12px; padding:4px 10px; border-radius:999px;
+             background:var(--warn); color:#1a1200; font-weight:600; }
+    main { padding:24px 28px; max-width:1100px; margin:0 auto; }
+    .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+            gap:16px; margin-bottom:28px; }
+    .kpi { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; }
+    .kpi .n { font-size:32px; font-weight:700; }
+    .kpi .l { color:var(--muted); font-size:13px; }
+    .kpi .n.bad { color:var(--bad); } .kpi .n.ok { color:var(--ok); }
+    h2 { font-size:15px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted);
+         margin:28px 0 12px; }
+    table { width:100%; border-collapse:collapse; background:var(--card);
+            border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+    th,td { text-align:left; padding:11px 14px; border-bottom:1px solid var(--line); font-size:14px; }
+    th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; }
+    tr:last-child td { border-bottom:none; }
+    .pill { padding:2px 9px; border-radius:999px; font-size:12px; font-weight:600; }
+    .s-running { background:#1d2b4d; color:#9db8ff; }
+    .s-draft { background:#2a2e38; color:var(--muted); }
+    .s-completed { background:#13351f; color:#7fe0b0; }
+    .bar { height:7px; border-radius:4px; background:var(--line); overflow:hidden; min-width:90px; }
+    .bar > i { display:block; height:100%; background:var(--bad); }
+    .risk { font-weight:700; }
+    .risk.hi { color:var(--bad); } .risk.mid { color:var(--warn); } .risk.lo { color:var(--ok); }
+    .empty { color:var(--muted); padding:18px 0; }
+    footer { color:var(--muted); font-size:12px; padding:24px 28px; border-top:1px solid var(--line);
+             max-width:1100px; margin:0 auto; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Phishjv</h1>
+    <span class="tag">v{{ version }} · plataforma de phishing simulado</span>
+    <a href="/training" style="color:var(--accent);text-decoration:none;font-size:14px;margin-left:16px">Treinamentos</a>
+    <a href="/triage" style="color:var(--accent);text-decoration:none;font-size:14px;margin-left:16px">Triagem</a>
+    {% if dry_run %}<span class="badge">DRY-RUN (SMTP desligado)</span>{% endif %}
+  </header>
+  <main>
+    <div class="kpis">
+      <div class="kpi"><div class="n {{ 'bad' if org_ppp > 20 else 'ok' }}">{{ org_ppp }}%</div>
+        <div class="l">Phish-prone (organização)</div></div>
+      <div class="kpi"><div class="n">{{ campaigns|length }}</div><div class="l">Campanhas</div></div>
+      <div class="kpi"><div class="n">{{ n_targets }}</div><div class="l">Alvos cadastrados</div></div>
+    </div>
+
+    <h2>Campanhas</h2>
+    {% if campaigns %}
+    <table>
+      <tr><th>Campanha</th><th>Status</th><th>Alvos</th><th>Abriu</th><th>Clicou</th>
+          <th>Submeteu</th><th>Reportou</th><th>PPP</th></tr>
+      {% for row in campaigns %}
+      <tr>
+        <td>{{ row.c.name }}</td>
+        <td><span class="pill s-{{ row.c.status.value }}">{{ row.c.status.value }}</span></td>
+        <td>{{ row.stats.total }}</td>
+        <td>{{ row.stats.opened }}</td>
+        <td>{{ row.stats.clicked }}</td>
+        <td>{{ row.stats.submitted }}</td>
+        <td>{{ row.stats.reported }}</td>
+        <td>
+          <div class="bar"><i style="width:{{ row.stats.ppp }}%"></i></div>
+          <small>{{ row.stats.ppp }}%</small>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}<p class="empty">Nenhuma campanha ainda. Rode <code>python seed.py</code> para dados de demonstração.</p>{% endif %}
+
+    <h2>Top risco por alvo</h2>
+    {% if risk %}
+    <table>
+      <tr><th>Alvo</th><th>Cargo</th><th>Risk Score</th></tr>
+      {% for r in risk %}
+      <tr>
+        <td>{{ r.t.full_name or r.t.email }}<br><small style="color:var(--muted)">{{ r.t.email }}</small></td>
+        <td>{{ r.t.position }}</td>
+        <td class="risk {{ 'hi' if r.score >= 60 else 'mid' if r.score >= 30 else 'lo' }}">{{ r.score }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}<p class="empty">Sem dados de risco ainda.</p>{% endif %}
+  </main>
+  <footer>
+    Phishjv — uso restrito a engajamentos autorizados e laboratórios próprios.
+    Credenciais submetidas nas landing pages <b>não são armazenadas</b>: registra-se apenas o evento.
+  </footer>
+</body>
+</html>

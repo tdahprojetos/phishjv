@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phishjv — {{ course.title }}</title>
+  <style>
+    :root { --bg:#0f1115; --card:#171a21; --line:#272b35; --fg:#e6e8ee; --muted:#9aa3b2;
+            --accent:#4f7cff; --ok:#35c28e; --bad:#ff5c6c; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--fg);
+           font:16px/1.65 system-ui,Segoe UI,Roboto,sans-serif; }
+    header { padding:20px 28px; border-bottom:1px solid var(--line); display:flex; gap:12px; align-items:center; }
+    header h1 { font-size:20px; margin:0; }
+    nav a { color:var(--accent); text-decoration:none; font-size:14px; margin-left:16px; }
+    main { padding:28px; max-width:760px; margin:0 auto; }
+    .lead { color:var(--muted); margin-top:0; }
+    .lesson { background:var(--card); border:1px solid var(--line); border-radius:12px;
+              padding:20px 24px; margin:16px 0; }
+    .lesson h3 { margin:0 0 8px; font-size:17px; color:var(--accent); }
+    .lesson code { background:#0b0d12; padding:1px 6px; border-radius:5px; font-size:14px; }
+    .quiz { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:22px 24px; margin-top:24px; }
+    .q { margin:0 0 22px; }
+    .q p.prompt { font-weight:600; margin:0 0 10px; }
+    .opt { display:block; padding:9px 12px; border:1px solid var(--line); border-radius:8px;
+           margin:6px 0; cursor:pointer; }
+    .opt:hover { border-color:var(--accent); }
+    .opt input { margin-right:8px; }
+    button { background:var(--accent); color:#fff; border:0; padding:11px 20px; border-radius:9px;
+             font-size:15px; cursor:pointer; }
+    .result { border-radius:12px; padding:20px 24px; margin-bottom:22px; }
+    .result.pass { background:#13351f; border:1px solid #1f6b40; }
+    .result.fail { background:#3a1518; border:1px solid #7a2a30; }
+    .result h2 { margin:0 0 6px; }
+    .fb { font-size:14px; margin-top:6px; }
+    .fb.ok { color:var(--ok); } .fb.no { color:var(--bad); }
+    .chosen-ok { border-color:var(--ok) !important; }
+    .chosen-no { border-color:var(--bad) !important; }
+    .correct-mark { border-color:var(--ok) !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Phishjv</h1>
+    <nav><a href="/training">← Treinamentos</a><a href="/">Painel</a></nav>
+  </header>
+  <main>
+    <h2 style="margin-top:0">{{ course.title }}</h2>
+    <p class="lead">{{ course.summary }}</p>
+
+    {% if result %}
+    <div class="result {{ 'pass' if result.passed else 'fail' }}">
+      <h2>{{ '✓ Aprovado' if result.passed else '✗ Não aprovado' }} — {{ result.score }}%</h2>
+      <div>{{ result.correct }} de {{ result.total }} corretas (mínimo {{ course.pass_score }}%).
+        {% if not result.passed %}Revise as lições e tente de novo.{% else %}Muito bem!{% endif %}</div>
+    </div>
+    {% endif %}
+
+    {% for lesson in course.lessons %}
+    <div class="lesson">
+      <h3>{{ loop.index }}. {{ lesson.title }}</h3>
+      {{ lesson.body_html|safe }}
+    </div>
+    {% endfor %}
+
+    <form class="quiz" method="post" action="/training/course/{{ course.id }}/submit">
+      <h3 style="margin-top:0">Quiz</h3>
+      <input type="hidden" name="target_id" value="{{ target_id }}">
+      {% for q in course.questions %}
+      {% set fb = (result.feedback[loop.index0] if result else None) %}
+      <div class="q">
+        <p class="prompt">{{ loop.index }}. {{ q.prompt }}
+          {% if fb %}<span class="fb {{ 'ok' if fb.ok else 'no' }}">— {{ '✓ correto' if fb.ok else '✗ incorreto' }}</span>{% endif %}
+        </p>
+        {% for opt in q.options %}
+        {% set oi = loop.index0 %}
+        <label class="opt
+          {%- if fb %}
+            {%- if oi == fb.correct_index %} correct-mark{% endif %}
+            {%- if fb.chosen is not none and oi == fb.chosen and not fb.ok %} chosen-no{% endif %}
+          {%- endif %}">
+          <input type="radio" name="q{{ q.id }}" value="{{ oi }}"
+            {%- if fb and fb.chosen is not none and oi == fb.chosen %} checked{% endif %}
+            {%- if result %} disabled{% endif %}>
+          {{ opt }}
+        </label>
+        {% endfor %}
+        {% if fb %}<div class="fb" style="color:var(--muted)">{{ fb.explanation }}</div>{% endif %}
+      </div>
+      {% endfor %}
+      {% if not result %}<button type="submit">Enviar respostas</button>
+      {% else %}<a href="/training/course/{{ course.id }}?target_id={{ target_id }}"><button type="button">Refazer</button></a>{% endif %}
+    </form>
+  </main>
+</body>
+</html>

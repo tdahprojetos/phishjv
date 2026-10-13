@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phishjv — Reportar phishing</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
+  <style>
+    body { font:15px/1.5 system-ui,Segoe UI,Roboto,sans-serif; margin:0; padding:18px;
+           background:#f5f6f8; color:#1a1d24; }
+    h2 { font-size:17px; margin:0 0 4px; }
+    p.sub { color:#5b6472; margin:0 0 16px; font-size:13px; }
+    button { background:#c0392b; color:#fff; border:0; border-radius:8px; padding:12px 16px;
+             font-size:15px; font-weight:600; cursor:pointer; width:100%; }
+    button:disabled { opacity:.6; cursor:default; }
+    .msg { margin-top:14px; font-size:14px; padding:10px 12px; border-radius:8px; display:none; }
+    .ok { background:#e4f6ec; color:#1b7a43; display:block; }
+    .err { background:#fdecec; color:#b02a2a; display:block; }
+    .cfg { margin-top:16px; font-size:12px; color:#8a93a2; }
+    .cfg input { width:100%; padding:7px; border:1px solid #d6dae1; border-radius:6px; font-size:12px; }
+  </style>
+</head>
+<body>
+  <h2>Reportar e-mail suspeito</h2>
+  <p class="sub">Isto envia o e-mail aberto para a equipe de segurança (fila de triagem do Phishjv).</p>
+  <button id="btn">⚠️ Reportar como phishing</button>
+  <div id="msg" class="msg"></div>
+  <div class="cfg">
+    Endpoint do Phishjv:
+    <input id="endpoint" value="https://phishjv.example.com/report">
+  </div>
+
+  <script>
+    Office.onReady(function () {
+      document.getElementById("btn").addEventListener("click", reportar);
+    });
+
+    function show(kind, text) {
+      const m = document.getElementById("msg");
+      m.className = "msg " + kind;
+      m.textContent = text;
+    }
+
+    function reportar() {
+      const btn = document.getElementById("btn");
+      const item = Office.context.mailbox.item;
+      btn.disabled = true;
+
+      // Lê o corpo em texto (truncado) e monta o reporte.
+      item.body.getAsync("text", function (res) {
+        const snippet = (res.status === Office.AsyncResultStatus.Succeeded)
+          ? (res.value || "").slice(0, 2000) : "";
+        const payload = {
+          reporter_email: Office.context.mailbox.userProfile.emailAddress || "",
+          subject: item.subject || "",
+          sender: (item.from && item.from.emailAddress) || "",
+          snippet: snippet
+        };
+        const endpoint = document.getElementById("endpoint").value;
+
+        fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        })
+        .then(r => r.ok ? r.json() : Promise.reject(r.status))
+        .then(() => show("ok", "✓ Reportado. Obrigado por ajudar a proteger a empresa!"))
+        .catch(() => { show("err", "Não foi possível reportar. Verifique o endpoint."); btn.disabled = false; });
+      });
+    }
+  </script>
+</body>
+</html>
